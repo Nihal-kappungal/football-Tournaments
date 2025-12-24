@@ -13,19 +13,17 @@ export const Leaderboard = ({ scorers }: Props) => {
             {scorers.length === 0 ? (
                 <Text style={styles.empty}>No goals scored yet.</Text>
             ) : (
-                <FlatList
-                    data={scorers}
-                    keyExtractor={(item) => item.player.id}
-                    renderItem={({ item, index }) => (
-                        <View style={styles.row}>
+                <View>
+                    {scorers.map((item, index) => (
+                        <View key={item.player.id} style={styles.row}>
                             <View style={[styles.rank, { backgroundColor: index === 0 ? Colors.dark.accent : 'transparent' }]}>
                                 <Text style={[styles.rankText, { color: index === 0 ? '#000' : Colors.dark.gray }]}>{index + 1}</Text>
                             </View>
                             <Text style={styles.name}>{item.player.name}</Text>
                             <Text style={styles.goals}>{item.goals} Goals</Text>
                         </View>
-                    )}
-                />
+                    ))}
+                </View>
             )}
         </View>
     );

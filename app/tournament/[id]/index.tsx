@@ -98,8 +98,8 @@ export default function TournamentDetailScreen() {
     });
 
 
-    return (
-        <View style={styles.container}>
+    const renderHeader = () => (
+        <View>
             {tournament.status === 'COMPLETED' && (
                 <View style={styles.winnerContainer}>
                     <Image
@@ -158,40 +158,50 @@ export default function TournamentDetailScreen() {
                     <Text style={[styles.tabText, activeTab === 'STATS' && styles.activeTabText]}>Stats</Text>
                 </TouchableOpacity>
             </View>
+        </View>
+    );
 
-            <View style={styles.content}>
-                {activeTab === 'FIXTURES' && (
-                    <SectionList
-                        sections={sortedSections}
-                        keyExtractor={(item) => item.id}
-                        renderItem={({ item }) => <FixtureItem match={item} participants={tournament.participants} />}
-                        renderSectionHeader={({ section: { title } }) => (
+    return (
+        <View style={styles.container}>
+            {activeTab === 'FIXTURES' ? (
+                <SectionList
+                    ListHeaderComponent={renderHeader}
+                    sections={sortedSections}
+                    keyExtractor={(item) => item.id}
+                    renderItem={({ item }) => <FixtureItem match={item} participants={tournament.participants} />}
+                    renderSectionHeader={({ section: { title } }) => (
+                        <View style={{ paddingHorizontal: Layout.spacing.md }}>
                             <Text style={styles.sectionHeader}>{title}</Text>
+                        </View>
+                    )}
+                    stickySectionHeadersEnabled={false}
+                    contentContainerStyle={{ paddingBottom: 20 }}
+                />
+            ) : (
+                <ScrollView contentContainerStyle={{ paddingBottom: 20 }}>
+                    {renderHeader()}
+                    <View style={styles.content}>
+                        {activeTab === 'TABLE' && (
+                            <StandingsTable participants={standings} />
                         )}
-                        stickySectionHeadersEnabled={false} // Clean look
-                        contentContainerStyle={{ paddingBottom: 20 }}
-                    />
-                )}
 
-                {activeTab === 'TABLE' && (
-                    <StandingsTable participants={standings} />
-                )}
-
-                {activeTab === 'GROUPS' && (
-                    <ScrollView>
-                        {Array.from(groupStandings.keys()).sort().map(groupId => (
-                            <View key={groupId} style={{ marginBottom: 20 }}>
-                                <Text style={styles.sectionHeader}>Group {groupId}</Text>
-                                <StandingsTable participants={groupStandings.get(groupId)!} />
+                        {activeTab === 'GROUPS' && (
+                            <View>
+                                {Array.from(groupStandings.keys()).sort().map(groupId => (
+                                    <View key={groupId} style={{ marginBottom: 20 }}>
+                                        <Text style={styles.sectionHeader}>Group {groupId}</Text>
+                                        <StandingsTable participants={groupStandings.get(groupId)!} />
+                                    </View>
+                                ))}
                             </View>
-                        ))}
-                    </ScrollView>
-                )}
+                        )}
 
-                {activeTab === 'STATS' && (
-                    <Leaderboard scorers={scorers} />
-                )}
-            </View>
+                        {activeTab === 'STATS' && (
+                            <Leaderboard scorers={scorers} />
+                        )}
+                    </View>
+                </ScrollView>
+            )}
         </View>
     );
 }

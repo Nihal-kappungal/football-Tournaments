@@ -20,7 +20,7 @@ export const StandingsTable = ({ participants }: Props) => {
                 <Text style={[styles.cell, styles.stat, styles.headerText]}>GD</Text>
                 <Text style={[styles.cell, styles.pts, styles.headerText]}>Pts</Text>
             </View>
-            <ScrollView>
+            <View>
                 {participants.map((p, index) => (
                     <View key={p.id} style={[styles.row, index < 4 && styles.topRow]}>
                         <Text style={[styles.cell, styles.pos]}>{index + 1}</Text>
@@ -33,7 +33,7 @@ export const StandingsTable = ({ participants }: Props) => {
                         <Text style={[styles.cell, styles.pts]}>{p.stats.points}</Text>
                     </View>
                 ))}
-            </ScrollView>
+            </View>
         </View>
     );
 };
