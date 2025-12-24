@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity } from 'react-native';
 import React, { useCallback, useState } from 'react';
 import { Colors, Layout } from '../constants/Colors';
 import { getTournaments, deleteTournament } from '../utils/storage';
@@ -6,10 +6,17 @@ import { Tournament } from '../types/types';
 import { useFocusEffect, Link } from 'expo-router';
 import { TournamentCard } from '../components/TournamentCard';
 import { Ionicons } from '@expo/vector-icons';
+import { CustomAlert, AlertButton } from '../components/CustomAlert';
 
 export default function HomeScreen() {
     const [tournaments, setTournaments] = useState<Tournament[]>([]);
     const [loading, setLoading] = useState(true);
+
+    // Alert State
+    const [alertVisible, setAlertVisible] = useState(false);
+    const [alertTitle, setAlertTitle] = useState('');
+    const [alertMessage, setAlertMessage] = useState('');
+    const [alertButtons, setAlertButtons] = useState<AlertButton[]>([]);
 
     const loadData = async () => {
         setLoading(true);
@@ -19,21 +26,25 @@ export default function HomeScreen() {
     };
 
     const handleDelete = (id: string) => {
-        Alert.alert(
-            "Delete Tournament",
-            "Are you sure you want to delete this tournament? This action cannot be undone.",
-            [
-                { text: "Cancel", style: "cancel" },
-                {
-                    text: "Delete",
-                    style: "destructive",
-                    onPress: async () => {
-                        await deleteTournament(id);
-                        loadData();
-                    }
+        setAlertTitle("Delete Tournament");
+        setAlertMessage("Are you sure you want to delete this tournament? This action cannot be undone.");
+        setAlertButtons([
+            {
+                text: "Cancel",
+                style: "cancel",
+                onPress: () => setAlertVisible(false)
+            },
+            {
+                text: "Delete",
+                style: "destructive",
+                onPress: async () => {
+                    setAlertVisible(false);
+                    await deleteTournament(id);
+                    loadData();
                 }
-            ]
-        );
+            }
+        ]);
+        setAlertVisible(true);
     };
 
     useFocusEffect(
@@ -66,6 +77,14 @@ export default function HomeScreen() {
                     <Ionicons name="add" size={30} color="#000" />
                 </TouchableOpacity>
             </Link>
+
+            <CustomAlert
+                visible={alertVisible}
+                title={alertTitle}
+                message={alertMessage}
+                buttons={alertButtons}
+                onClose={() => setAlertVisible(false)}
+            />
         </View>
     );
 }

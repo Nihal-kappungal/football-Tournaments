@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView } from 'react-native';
 import React, { useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Colors, Layout } from '../../constants/Colors';
@@ -8,11 +8,25 @@ import { generateGroupKnockoutFixtures } from '../../utils/hybridUtils';
 import { saveTournament } from '../../utils/storage';
 import { Participant, Tournament } from '../../types/types';
 import { v4 as uuidv4 } from 'uuid';
+import { CustomAlert } from '../../components/CustomAlert';
 
 export default function ParticipantsScreen() {
     const params = useLocalSearchParams<{ name: string; type: string; hasTwoLegs: string }>();
     const router = useRouter();
     const [names, setNames] = useState<string[]>(['', '', '', '']); // Start with 4 default slots
+
+    // Alert State
+    const [alertVisible, setAlertVisible] = useState(false);
+    const [alertTitle, setAlertTitle] = useState('');
+    const [alertMessage, setAlertMessage] = useState('');
+    const [alertType, setAlertType] = useState<'info' | 'error' | 'success'>('info');
+
+    const showAlert = (title: string, message: string, type: 'info' | 'error' | 'success' = 'info') => {
+        setAlertTitle(title);
+        setAlertMessage(message);
+        setAlertType(type);
+        setAlertVisible(true);
+    };
 
     const updateName = (text: string, index: number) => {
         const newNames = [...names];
@@ -32,7 +46,7 @@ export default function ParticipantsScreen() {
     const handleCreate = async () => {
         const validNames = names.map(n => n.trim()).filter(n => n.length > 0);
         if (validNames.length < 2) {
-            Alert.alert('Error', 'Please enter at least 2 participants');
+            showAlert('Not Enough Players', 'Please enter at least 2 participants.', 'error');
             return;
         }
 
@@ -125,6 +139,14 @@ export default function ParticipantsScreen() {
                     <Ionicons name="checkmark-circle" size={24} color={Colors.dark.background} />
                 </TouchableOpacity>
             </View>
+
+            <CustomAlert
+                visible={alertVisible}
+                title={alertTitle}
+                message={alertMessage}
+                type={alertType}
+                onClose={() => setAlertVisible(false)}
+            />
         </View>
     );
 }

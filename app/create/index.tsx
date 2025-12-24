@@ -4,12 +4,24 @@ import { Colors, Layout } from '../../constants/Colors';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { TournamentType } from '../../types/types';
+import { CustomAlert } from '../../components/CustomAlert';
 
 export default function CreateTournamentScreen() {
     const [name, setName] = useState('');
     const [type, setType] = useState<TournamentType>('LEAGUE');
     const [hasTwoLegs, setHasTwoLegs] = useState(false);
     const router = useRouter();
+
+    // Alert State
+    const [alertVisible, setAlertVisible] = useState(false);
+    const [alertTitle, setAlertTitle] = useState('');
+    const [alertMessage, setAlertMessage] = useState('');
+
+    const showAlert = (title: string, message: string) => {
+        setAlertTitle(title);
+        setAlertMessage(message);
+        setAlertVisible(true);
+    };
 
     const handleTypeChange = (newType: TournamentType) => {
         setType(newType);
@@ -20,7 +32,7 @@ export default function CreateTournamentScreen() {
 
     const handleNext = () => {
         if (!name.trim()) {
-            alert('Please enter a tournament name');
+            showAlert('Required', 'Please enter a tournament name');
             return;
         }
         router.push({
@@ -103,6 +115,13 @@ export default function CreateTournamentScreen() {
                     <Ionicons name="arrow-forward" size={20} color={Colors.dark.background} />
                 </TouchableOpacity>
             </View>
+
+            <CustomAlert
+                visible={alertVisible}
+                title={alertTitle}
+                message={alertMessage}
+                onClose={() => setAlertVisible(false)}
+            />
         </KeyboardAvoidingView >
     );
 }
