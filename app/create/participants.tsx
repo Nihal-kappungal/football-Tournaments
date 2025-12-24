@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Colors, Layout } from '../../constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
 import { generateLeagueFixtures, generateKnockoutFixtures } from '../../utils/fixtureGenerator';
+import { generateGroupKnockoutFixtures } from '../../utils/hybridUtils';
 import { saveTournament } from '../../utils/storage';
 import { Participant, Tournament } from '../../types/types';
 import { v4 as uuidv4 } from 'uuid';
@@ -42,22 +43,41 @@ export default function ParticipantsScreen() {
         }));
 
         const tournamentId = uuidv4();
-        const type = params.type as 'LEAGUE' | 'KNOCKOUT';
+        const type = params.type as 'LEAGUE' | 'KNOCKOUT' | 'GROUPS_KNOCKOUT'; // Updated type
 
         let fixtures;
         if (type === 'LEAGUE') {
             fixtures = generateLeagueFixtures(participants, tournamentId);
-        } else {
+        } else if (type === 'KNOCKOUT') {
             fixtures = generateKnockoutFixtures(participants, tournamentId);
+        } else if (type === 'GROUPS_KNOCKOUT') {
+            const result = generateGroupKnockoutFixtures(participants, tournamentId);
+            fixtures = result.fixtures;
+            // Group assignment updates participants
+            // We need to update the local participants array before saving? 
+            // Yes, result.participantsWithGroups contains definitions.
+            // But `participants` const here is just created. We should use the returned one.
+            // Wait, participants is const.
+            // We need to assign filtered/updated participants to the Tournament object.
+            // Let's refactor slightly.
+        }
+
+        // Refactor to use possibly updated participants
+        let finalParticipants = participants;
+        if (type === 'GROUPS_KNOCKOUT') {
+            const res = generateGroupKnockoutFixtures(participants, tournamentId);
+            fixtures = res.fixtures;
+            finalParticipants = res.participantsWithGroups;
         }
 
         const tournament: Tournament = {
             id: tournamentId,
             name: params.name!,
             type,
-            participants,
-            fixtures,
+            participants: finalParticipants,
+            fixtures: fixtures!,
             status: 'ACTIVE',
+            stage: type === 'GROUPS_KNOCKOUT' ? 'GROUP_STAGE' : undefined, // Added stage
             createdAt: Date.now(),
         };
 

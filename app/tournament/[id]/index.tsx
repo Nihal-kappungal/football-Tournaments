@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ActivityIndicator, SectionList, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, SectionList, TouchableOpacity, ScrollView } from 'react-native';
 import React, { useCallback, useState } from 'react';
 import { useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { getTournaments } from '../../../utils/storage';
@@ -15,22 +15,42 @@ export default function TournamentDetailScreen() {
     const { id } = useLocalSearchParams<{ id: string }>();
     const [tournament, setTournament] = useState<Tournament | null>(null);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<Tab>('FIXTURES');
+    const [activeTab, setActiveTab] = useState<string>('FIXTURES'); // Changed to string for flexibility
     const [standings, setStandings] = useState<Participant[]>([]);
+
+    // For Groups
+    const [groupStandings, setGroupStandings] = useState<Map<string, Participant[]>>(new Map()); // Map groupId -> participants
     const [scorers, setScorers] = useState<{ player: Participant, goals: number }[]>([]);
 
     const loadData = async () => {
-        // setLoading(true); // Don't show full loader on refresh, maybe refreshing state
         const all = await getTournaments();
         const t = all.find(x => x.id === id);
         if (t) {
             setTournament(t);
-            const updatedStandings = calculateStandings(t.participants, t.fixtures);
-            setStandings(updatedStandings);
 
-            // For stats, we need to pass the participants from the tournament (t.participants might be outdated in stats if not updated? 
-            // No, calculateStandings returns NEW participant objects with updated stats.
-            // But getTopScorers depends on matches and maps to participants.
+            if (t.type === 'LEAGUE') {
+                setStandings(calculateStandings(t.participants, t.fixtures));
+            } else if (t.type === 'GROUPS_KNOCKOUT') {
+                // Calculate standings per group
+                const groups = new Map<string, Participant[]>();
+                const uniqueGroups = Array.from(new Set(t.participants.map(p => p.groupId).filter(g => g)));
+
+                uniqueGroups.forEach(gid => {
+                    const groupPs = t.participants.filter(p => p.groupId === gid);
+                    // Filter group matches: (RoundOrder 0 or check participants)
+                    // We tagged group matches with roundOrder 0 earlier? 
+                    // Or filtering by player ID is safer.
+                    const groupMatches = t.fixtures.filter(m => {
+                        const homeP = t.participants.find(p => p.id === m.homeTeamId);
+                        return homeP?.groupId === gid && (t.stage === 'GROUP_STAGE' || m.roundOrder === 0);
+                        // If stage is Knockout, we still want to show group tables? Yes.
+                        // Matches in group stage usually have roundOrder 0.
+                    });
+                    groups.set(gid!, calculateStandings(groupPs, groupMatches));
+                });
+                setGroupStandings(groups);
+            }
+
             setScorers(getTopScorers(t.participants, t.fixtures));
         }
         setLoading(false);
@@ -88,12 +108,21 @@ export default function TournamentDetailScreen() {
                     <Text style={[styles.tabText, activeTab === 'FIXTURES' && styles.activeTabText]}>Fixtures</Text>
                 </TouchableOpacity>
 
-                {tournament.type === 'LEAGUE' && (
+                {(tournament.type === 'LEAGUE') && (
                     <TouchableOpacity
                         style={[styles.tab, activeTab === 'TABLE' && styles.activeTab]}
                         onPress={() => setActiveTab('TABLE')}
                     >
                         <Text style={[styles.tabText, activeTab === 'TABLE' && styles.activeTabText]}>Table</Text>
+                    </TouchableOpacity>
+                )}
+
+                {(tournament.type === 'GROUPS_KNOCKOUT') && (
+                    <TouchableOpacity
+                        style={[styles.tab, activeTab === 'GROUPS' && styles.activeTab]}
+                        onPress={() => setActiveTab('GROUPS')}
+                    >
+                        <Text style={[styles.tabText, activeTab === 'GROUPS' && styles.activeTabText]}>Groups</Text>
                     </TouchableOpacity>
                 )}
 
@@ -121,6 +150,17 @@ export default function TournamentDetailScreen() {
 
                 {activeTab === 'TABLE' && (
                     <StandingsTable participants={standings} />
+                )}
+
+                {activeTab === 'GROUPS' && (
+                    <ScrollView>
+                        {Array.from(groupStandings.keys()).sort().map(groupId => (
+                            <View key={groupId} style={{ marginBottom: 20 }}>
+                                <Text style={styles.sectionHeader}>Group {groupId}</Text>
+                                <StandingsTable participants={groupStandings.get(groupId)!} />
+                            </View>
+                        ))}
+                    </ScrollView>
                 )}
 
                 {activeTab === 'STATS' && (

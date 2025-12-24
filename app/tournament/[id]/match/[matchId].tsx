@@ -2,7 +2,8 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'rea
 import React, { useState, useEffect } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { getTournaments, saveTournament } from '../../../../utils/storage';
-import { handleKnockoutProgression } from '../../../../utils/tournamentLogic';
+import { handleKnockoutProgression, checkTournamentCompletion } from '../../../../utils/tournamentLogic';
+import { advanceGroupToKnockout } from '../../../../utils/hybridUtils';
 import { Tournament, Match, Participant } from '../../../../types/types';
 import { Colors, Layout } from '../../../../constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
@@ -107,6 +108,21 @@ export default function MatchDetailScreen() {
 
         // Handle Knockout progression
         handleKnockoutProgression(updatedTournament, updatedMatch);
+
+        // Handle Group Stage completion for Hybrid
+        if (updatedTournament.type === 'GROUPS_KNOCKOUT' && updatedTournament.stage === 'GROUP_STAGE') {
+            const nextStageTournament = advanceGroupToKnockout(updatedTournament);
+            if (nextStageTournament) {
+                // Transition!
+                // Alert user?
+                await saveTournament(nextStageTournament);
+                router.back();
+                return;
+            }
+        }
+
+        // Final completion check
+        checkTournamentCompletion(updatedTournament);
 
         await saveTournament(updatedTournament);
         router.back();

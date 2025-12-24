@@ -159,4 +159,33 @@ export const handleKnockoutProgression = (tournament: Tournament, completedMatch
             });
         }
     }
+}
+
+
+export const checkTournamentCompletion = (tournament: Tournament) => {
+    // If status is already completed, ignore
+    if (tournament.status === 'COMPLETED') return;
+
+    // Logic depends on type
+    if (tournament.type === 'LEAGUE') {
+        const allPlayed = tournament.fixtures.every(m => m.isPlayed);
+        if (allPlayed && tournament.fixtures.length > 0) {
+            tournament.status = 'COMPLETED';
+        }
+    } else if (tournament.type === 'KNOCKOUT' || (tournament.type === 'GROUPS_KNOCKOUT' && tournament.stage === 'KNOCKOUT_STAGE')) {
+        // Completion is when the FINAL is played.
+        // How to detect final? It's the match with no next round possible.
+        // Or simply: It's the single match in the last round.
+        // Find max round order.
+        if (tournament.fixtures.length === 0) return;
+
+        const maxRound = Math.max(...tournament.fixtures.map(m => m.roundOrder || 0));
+        const finalMatches = tournament.fixtures.filter(m => m.roundOrder === maxRound);
+
+        // If it is the final round, there should be 1 match (Final) or maybe 2 (3rd place?).
+        // Usually 1 match.
+        if (finalMatches.length === 1 && finalMatches[0].isPlayed) {
+            tournament.status = 'COMPLETED';
+        }
+    }
 };

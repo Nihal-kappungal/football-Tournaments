@@ -1,7 +1,7 @@
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
 import React, { useCallback, useState } from 'react';
 import { Colors, Layout } from '../constants/Colors';
-import { getTournaments } from '../utils/storage';
+import { getTournaments, deleteTournament } from '../utils/storage';
 import { Tournament } from '../types/types';
 import { useFocusEffect, Link } from 'expo-router';
 import { TournamentCard } from '../components/TournamentCard';
@@ -16,6 +16,24 @@ export default function HomeScreen() {
         const data = await getTournaments();
         setTournaments(data.sort((a, b) => b.createdAt - a.createdAt));
         setLoading(false);
+    };
+
+    const handleDelete = (id: string) => {
+        Alert.alert(
+            "Delete Tournament",
+            "Are you sure you want to delete this tournament? This action cannot be undone.",
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Delete",
+                    style: "destructive",
+                    onPress: async () => {
+                        await deleteTournament(id);
+                        loadData();
+                    }
+                }
+            ]
+        );
     };
 
     useFocusEffect(
@@ -38,7 +56,7 @@ export default function HomeScreen() {
                 <FlatList
                     data={tournaments}
                     keyExtractor={(item) => item.id}
-                    renderItem={({ item }) => <TournamentCard tournament={item} />}
+                    renderItem={({ item }) => <TournamentCard tournament={item} onDelete={handleDelete} />}
                     contentContainerStyle={styles.list}
                 />
             )}

@@ -7,12 +7,17 @@ import { Link } from 'expo-router';
 
 interface Props {
     tournament: Tournament;
+    onDelete?: (id: string) => void;
 }
 
-export const TournamentCard = ({ tournament }: Props) => {
+export const TournamentCard = ({ tournament, onDelete }: Props) => {
     return (
         <Link href={`/tournament/${tournament.id}`} asChild>
-            <TouchableOpacity style={styles.card} activeOpacity={0.8}>
+            <TouchableOpacity
+                style={styles.card}
+                activeOpacity={0.8}
+                onLongPress={() => onDelete && onDelete(tournament.id)}
+            >
                 <View style={styles.header}>
                     <View style={styles.iconContainer}>
                         <Ionicons
@@ -28,8 +33,10 @@ export const TournamentCard = ({ tournament }: Props) => {
                     <Ionicons name="chevron-forward" size={20} color={Colors.dark.gray} />
                 </View>
                 <View style={styles.statusRow}>
-                    <View style={[styles.badge, { backgroundColor: tournament.status === 'ACTIVE' ? Colors.dark.primary : Colors.dark.gray }]}>
-                        <Text style={styles.badgeText}>{tournament.status}</Text>
+                    <View style={[styles.badge, {
+                        backgroundColor: tournament.status === 'COMPLETED' ? Colors.dark.danger : (tournament.status === 'ACTIVE' ? Colors.dark.primary : Colors.dark.gray)
+                    }]}>
+                        <Text style={styles.badgeText}>{tournament.status === 'COMPLETED' ? 'ENDED' : tournament.status}</Text>
                     </View>
                 </View>
             </TouchableOpacity>

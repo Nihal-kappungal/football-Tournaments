@@ -24,6 +24,7 @@ export default function CreateTournamentScreen() {
     return (
         <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
             style={styles.container}
         >
             <ScrollView contentContainerStyle={styles.scroll}>
@@ -38,24 +39,35 @@ export default function CreateTournamentScreen() {
                 />
 
                 <Text style={styles.label}>Format</Text>
-                <View style={styles.typeContainer}>
-                    <TouchableOpacity
-                        style={[styles.typeOption, type === 'LEAGUE' && styles.typeSelected]}
-                        onPress={() => setType('LEAGUE')}
-                    >
-                        <Ionicons name="list" size={32} color={type === 'LEAGUE' ? Colors.dark.background : Colors.dark.gray} />
-                        <Text style={[styles.typeText, type === 'LEAGUE' && styles.typeTextSelected]}>League</Text>
-                        <Text style={[styles.typeDesc, type === 'LEAGUE' && styles.typeDescSelected]}>Round Robin. Everyone plays everyone.</Text>
-                    </TouchableOpacity>
+                <View style={{ gap: Layout.spacing.md }}>
+                    <View style={styles.typeContainer}>
+                        <TouchableOpacity
+                            style={[styles.typeOption, type === 'LEAGUE' && styles.typeSelected]}
+                            onPress={() => setType('LEAGUE')}
+                        >
+                            <Ionicons name="list" size={32} color={type === 'LEAGUE' ? Colors.dark.background : Colors.dark.gray} />
+                            <Text style={[styles.typeText, type === 'LEAGUE' && styles.typeTextSelected]}>League</Text>
+                            <Text style={[styles.typeDesc, type === 'LEAGUE' && styles.typeDescSelected]}>Round Robin. Everyone plays everyone.</Text>
+                        </TouchableOpacity>
 
-                    <TouchableOpacity
-                        style={[styles.typeOption, type === 'KNOCKOUT' && styles.typeSelected]}
-                        onPress={() => setType('KNOCKOUT')}
-                    >
-                        <Ionicons name="git-network" size={32} color={type === 'KNOCKOUT' ? Colors.dark.background : Colors.dark.gray} />
-                        <Text style={[styles.typeText, type === 'KNOCKOUT' && styles.typeTextSelected]}>Knockout</Text>
-                        <Text style={[styles.typeDesc, type === 'KNOCKOUT' && styles.typeDescSelected]}>Elimination bracket. Winner advances.</Text>
-                    </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[styles.typeOption, type === 'KNOCKOUT' && styles.typeSelected]}
+                            onPress={() => setType('KNOCKOUT')}
+                        >
+                            <Ionicons name="git-network" size={32} color={type === 'KNOCKOUT' ? Colors.dark.background : Colors.dark.gray} />
+                            <Text style={[styles.typeText, type === 'KNOCKOUT' && styles.typeTextSelected]}>Knockout</Text>
+                            <Text style={[styles.typeDesc, type === 'KNOCKOUT' && styles.typeDescSelected]}>Elimination bracket. Winner advances.</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={[styles.typeOption, type === 'GROUPS_KNOCKOUT' && styles.typeSelected]}
+                            onPress={() => setType('GROUPS_KNOCKOUT')}
+                        >
+                            <Ionicons name="people" size={32} color={type === 'GROUPS_KNOCKOUT' ? Colors.dark.background : Colors.dark.gray} />
+                            <Text style={[styles.typeText, type === 'GROUPS_KNOCKOUT' && styles.typeTextSelected]}>Hybrid</Text>
+                            <Text style={[styles.typeDesc, type === 'GROUPS_KNOCKOUT' && styles.typeDescSelected]}>World Cup style.Groups then knockout.</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
 
             </ScrollView>
@@ -96,17 +108,19 @@ const styles = StyleSheet.create({
     },
     typeContainer: {
         flexDirection: 'row',
-        gap: Layout.spacing.md,
+        flexWrap: 'wrap',
+        justifyContent: 'space-between',
     },
+
     typeOption: {
-        flex: 1,
+        width: '48%',
         backgroundColor: Colors.dark.surface,
         padding: Layout.spacing.md,
         borderRadius: Layout.borderRadius.md,
         borderWidth: 1,
         borderColor: Colors.dark.border,
         alignItems: 'center',
-        gap: 8,
+        marginBottom: Layout.spacing.md, // spacing between rows
     },
     typeSelected: {
         backgroundColor: Colors.dark.accent,
