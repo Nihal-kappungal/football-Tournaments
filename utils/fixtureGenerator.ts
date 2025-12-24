@@ -1,6 +1,16 @@
 import { Match, Participant, TournamentType } from '../types/types';
 import { v4 as uuidv4 } from 'uuid';
 
+export const getRoundName = (numMatches: number, legSuffix: string = ''): string => {
+    let name = '';
+    if (numMatches === 1) name = 'Final';
+    else if (numMatches === 2) name = 'Semi-Final';
+    else if (numMatches === 4) name = 'Quarter-Final';
+    else name = `Round of ${numMatches * 2}`;
+
+    return legSuffix ? `${name} - ${legSuffix}` : name;
+};
+
 export const generateLeagueFixtures = (participants: Participant[], tournamentId: string, rounds: number = 1): Match[] => {
     const fixtures: Match[] = [];
     const n = participants.length;
@@ -68,16 +78,17 @@ export const generateKnockoutFixtures = (participants: Participant[], tournament
     }
 
     // 4. Generate Round 1
+    const numMatchesInRound1 = padded.length / 2;
     for (let i = 0; i < padded.length; i += 2) {
         const home1 = padded[i];
         const away1 = padded[i + 1];
 
         // Match 1 (Leg 1 or Only Match)
-        createKnockoutMatch(fixtures, tournamentId, home1, away1, 1, hasTwoLegs ? 'Round 1 - Leg 1' : 'Round 1');
+        createKnockoutMatch(fixtures, tournamentId, home1, away1, 1, getRoundName(numMatchesInRound1, hasTwoLegs ? 'Leg 1' : ''));
 
         if (hasTwoLegs) {
             // Match 2 (Leg 2) - Swap Home/Away
-            createKnockoutMatch(fixtures, tournamentId, away1, home1, 1, 'Round 1 - Leg 2');
+            createKnockoutMatch(fixtures, tournamentId, away1, home1, 1, getRoundName(numMatchesInRound1, 'Leg 2'));
         }
     }
 

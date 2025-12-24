@@ -1,5 +1,6 @@
 import { Match, Participant, Tournament } from '../types/types';
 import { v4 as uuidv4 } from 'uuid';
+import { getRoundName } from './fixtureGenerator';
 
 
 export const calculateStandings = (participants: Participant[], matches: Match[]): Participant[] => {
@@ -169,8 +170,12 @@ export const handleKnockoutProgression = (tournament: Tournament, completedMatch
     );
 
     if (!existing) {
+        // Calculate number of matches (ties) in the NEXT round
+        const numNextRoundTies = ties.length / 2;
+
         // Create 1 or 2 matches based on tournament setting
-        const createMatch = (h: string, a: string, name: string) => {
+        const createMatch = (h: string, a: string, suffix: string) => {
+            const name = getRoundName(numNextRoundTies, suffix);
             tournament.fixtures.push({
                 id: uuidv4(),
                 tournamentId: tournament.id,
@@ -186,10 +191,10 @@ export const handleKnockoutProgression = (tournament: Tournament, completedMatch
         };
 
         if (tournament.hasTwoLegs) {
-            createMatch(winnerA, winnerB, `Round ${nextRound} - Leg 1`);
-            createMatch(winnerB, winnerA, `Round ${nextRound} - Leg 2`);
+            createMatch(winnerA, winnerB, 'Leg 1');
+            createMatch(winnerB, winnerA, 'Leg 2');
         } else {
-            createMatch(winnerA, winnerB, `Round ${nextRound}`);
+            createMatch(winnerA, winnerB, '');
         }
     }
 }
