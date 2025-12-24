@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ActivityIndicator, SectionList, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, SectionList, TouchableOpacity, ScrollView, Image } from 'react-native';
 import React, { useCallback, useState } from 'react';
 import { useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { getTournaments } from '../../../utils/storage';
@@ -8,6 +8,7 @@ import { Tournament, Match, Participant } from '../../../types/types';
 import { FixtureItem } from '../../../components/FixtureItem';
 import { StandingsTable } from '../../../components/StandingsTable';
 import { Leaderboard } from '../../../components/Leaderboard';
+import { Ionicons } from '@expo/vector-icons';
 
 type Tab = 'FIXTURES' | 'TABLE' | 'STATS';
 
@@ -99,6 +100,30 @@ export default function TournamentDetailScreen() {
 
     return (
         <View style={styles.container}>
+            {tournament.status === 'COMPLETED' && (
+                <View style={styles.winnerContainer}>
+                    <Image
+                        source={require('../../../assets/winner-badge.png')}
+                        style={styles.winnerImage}
+                        resizeMode="contain"
+                    />
+                    <Text style={styles.winnerName}>
+                        {tournament.type === 'LEAGUE'
+                            ? standings[0]?.name
+                            : (() => {
+                                const maxRound = Math.max(...tournament.fixtures.map(m => m.roundOrder || 0));
+                                const finalMatch = tournament.fixtures.find(m => m.roundOrder === maxRound);
+                                if (!finalMatch || !finalMatch.isPlayed) return 'Unknown';
+
+                                const winnerId = finalMatch.homeScore! > finalMatch.awayScore! ? finalMatch.homeTeamId : finalMatch.awayTeamId;
+                                const winner = tournament.participants.find(p => p.id === winnerId);
+                                return winner ? winner.name : 'Unknown';
+                            })()
+                        }
+                    </Text>
+                </View>
+            )}
+
             {/* Tab Header */}
             <View style={styles.tabs}>
                 <TouchableOpacity
@@ -217,5 +242,28 @@ const styles = StyleSheet.create({
         fontSize: 18,
         marginTop: Layout.spacing.md,
         marginBottom: Layout.spacing.sm,
+    },
+    winnerContainer: {
+        alignItems: 'center',
+        marginVertical: Layout.spacing.md,
+        padding: Layout.spacing.md,
+    },
+    winnerImage: {
+        width: '100%',
+        height: 150,
+    },
+    winnerText: {
+        // Unused now, but kept if needed
+        color: Colors.dark.gray,
+    },
+    winnerName: {
+        color: Colors.dark.accent, // Gold
+        fontWeight: 'bold',
+        fontSize: 32,
+        marginTop: Layout.spacing.sm,
+        textAlign: 'center',
+        textShadowColor: 'rgba(0, 0, 0, 0.75)',
+        textShadowOffset: { width: -1, height: 1 },
+        textShadowRadius: 10
     },
 });
