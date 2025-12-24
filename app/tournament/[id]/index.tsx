@@ -91,9 +91,52 @@ export default function TournamentDetailScreen() {
 
     const sortedSections = Array.from(groupedMatches.keys()).sort((a, b) => a - b).map(key => {
         const matches = groupedMatches.get(key)!;
+        let sectionData: (Match | Match[])[] = matches;
+
+        if (tournament.hasTwoLegs && tournament.type === 'KNOCKOUT') {
+            // Group by Tie
+            const processed = new Set<string>();
+            const ties: Match[][] = [];
+
+            matches.forEach(m => {
+                if (processed.has(m.id)) return;
+                // Find pair in this round
+                const pair = matches.find(other =>
+                    other.id !== m.id &&
+                    !processed.has(other.id) &&
+                    ((other.homeTeamId === m.homeTeamId && other.awayTeamId === m.awayTeamId) ||
+                        (other.homeTeamId === m.awayTeamId && other.awayTeamId === m.homeTeamId))
+                );
+
+                if (pair) {
+
+                    processed.add(m.id);
+                    processed.add(pair.id);
+                    // Add as array. Sort by something? Maybe round name 'Leg 1' 'Leg 2'?
+                    // Or usually Leg 1 comes first if we trust order. 
+                    // Let's sort so Leg 1 is first.
+                    // Or sort by which team is home?
+                    // User wants specific display.
+                    // Usually we assume they are added in order.
+                    // Let's just push [m, pair]
+                    ties.push([m, pair].sort((a, b) => (a.roundName || '').localeCompare(b.roundName || '')));
+                } else {
+                    processed.add(m.id);
+                    ties.push([m]);
+                }
+            });
+            sectionData = ties;
+        }
+
+        // Adjust Title: If legs are mixed in same round order, we just use generic name.
+        // My generator puts "Round 1 - Leg 1" and "Round 1 - Leg 2" BOTH in roundOrder=1.
+        // So they end up here. The title might pick one.
+        // We probably want just "Round 1" as title.
+        const roundTitle = matches[0].roundName?.split(' - ')[0] || `Round ${key}`;
+
         return {
-            title: matches[0].roundName || `Round ${key}`,
-            data: matches
+            title: roundTitle,
+            data: sectionData
         };
     });
 
@@ -167,8 +210,8 @@ export default function TournamentDetailScreen() {
                 <SectionList
                     ListHeaderComponent={renderHeader}
                     sections={sortedSections}
-                    keyExtractor={(item) => item.id}
-                    renderItem={({ item }) => <FixtureItem match={item} participants={tournament.participants} />}
+                    keyExtractor={(item) => Array.isArray(item) ? item[0].id : item.id}
+                    renderItem={({ item }) => <FixtureItem data={item} participants={tournament.participants} />}
                     renderSectionHeader={({ section: { title } }) => (
                         <View style={{ paddingHorizontal: Layout.spacing.md }}>
                             <Text style={styles.sectionHeader}>{title}</Text>

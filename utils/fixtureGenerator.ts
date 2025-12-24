@@ -48,7 +48,7 @@ export const generateLeagueFixtures = (participants: Participant[], tournamentId
 };
 
 // Simple Knockout generator (Single Elimination)
-export const generateKnockoutFixtures = (participants: Participant[], tournamentId: string): Match[] => {
+export const generateKnockoutFixtures = (participants: Participant[], tournamentId: string, hasTwoLegs: boolean = false): Match[] => {
     const fixtures: Match[] = [];
 
     // 1. Determine next power of 2
@@ -67,55 +67,54 @@ export const generateKnockoutFixtures = (participants: Participant[], tournament
         });
     }
 
-    // 3. Shuffle (optional, but good for seeds if not provided)
-    // For MVP, keep order so user can seed by entry? Or just shuffle?
-    // Standard: If seeded, 1 plays 8, 2 plays 7.
-    // Here we just pair adjacent. 
-    // Let's just use the padded array as is (User input order).
-    // But Byes should ideally be distributed or at bottom?
-    // Current logic: Appends Byes at end.
-    // So last matches will be X vs Bye.
-
     // 4. Generate Round 1
     for (let i = 0; i < padded.length; i += 2) {
-        const home = padded[i];
-        const away = padded[i + 1];
+        const home1 = padded[i];
+        const away1 = padded[i + 1];
 
-        const isByeMatch = home.id.startsWith('BYE') || away.id.startsWith('BYE');
+        // Match 1 (Leg 1 or Only Match)
+        createKnockoutMatch(fixtures, tournamentId, home1, away1, 1, hasTwoLegs ? 'Round 1 - Leg 1' : 'Round 1');
 
-        // Determine auto-result for Bye
-        let homeScore = null;
-        let awayScore = null;
-        let isPlayed = false;
-        let scorers: any[] = [];
-
-        if (isByeMatch) {
-            isPlayed = true;
-            if (home.id.startsWith('BYE') && !away.id.startsWith('BYE')) {
-                // Away wins
-                homeScore = 0; awayScore = 1; // 1-0 walkover
-            } else if (!home.id.startsWith('BYE') && away.id.startsWith('BYE')) {
-                // Home wins
-                homeScore = 1; awayScore = 0;
-            } else {
-                // Bye vs Bye? Should not happen if sorted well, but if so, Home wins
-                homeScore = 1; awayScore = 0;
-            }
+        if (hasTwoLegs) {
+            // Match 2 (Leg 2) - Swap Home/Away
+            createKnockoutMatch(fixtures, tournamentId, away1, home1, 1, 'Round 1 - Leg 2');
         }
-
-        fixtures.push({
-            id: uuidv4(),
-            tournamentId,
-            homeTeamId: home.id,
-            awayTeamId: away.id,
-            homeScore,
-            awayScore,
-            isPlayed,
-            roundOrder: 1,
-            roundName: 'Round 1',
-            scorers,
-        });
     }
 
     return fixtures;
+};
+
+const createKnockoutMatch = (fixtures: Match[], tournamentId: string, home: Participant, away: Participant, roundOrder: number, roundName: string) => {
+    const isByeMatch = home.id.startsWith('BYE') || away.id.startsWith('BYE');
+    let homeScore = null;
+    let awayScore = null;
+    let isPlayed = false;
+    let scorers: any[] = [];
+
+    if (isByeMatch) {
+        isPlayed = true;
+        if (home.id.startsWith('BYE') && !away.id.startsWith('BYE')) {
+            // Away wins (Bye loses)
+            homeScore = 0; awayScore = 1;
+        } else if (!home.id.startsWith('BYE') && away.id.startsWith('BYE')) {
+            // Home wins (Bye loses)
+            homeScore = 1; awayScore = 0;
+        } else {
+            // Bye vs Bye
+            homeScore = 1; awayScore = 0;
+        }
+    }
+
+    fixtures.push({
+        id: uuidv4(),
+        tournamentId,
+        homeTeamId: home.id,
+        awayTeamId: away.id,
+        homeScore,
+        awayScore,
+        isPlayed,
+        roundOrder,
+        roundName,
+        scorers,
+    });
 };

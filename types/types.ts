@@ -48,5 +48,6 @@ export interface Tournament {
     fixtures: Match[]; // Flat list of matches is easier for storage, can group by roundName
     status: 'ACTIVE' | 'COMPLETED';
     stage?: 'GROUP_STAGE' | 'KNOCKOUT_STAGE'; // For Hybrid format
+    hasTwoLegs?: boolean;
     createdAt: number;
 }

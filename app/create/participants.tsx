@@ -10,7 +10,7 @@ import { Participant, Tournament } from '../../types/types';
 import { v4 as uuidv4 } from 'uuid';
 
 export default function ParticipantsScreen() {
-    const params = useLocalSearchParams<{ name: string; type: string }>();
+    const params = useLocalSearchParams<{ name: string; type: string; hasTwoLegs: string }>();
     const router = useRouter();
     const [names, setNames] = useState<string[]>(['', '', '', '']); // Start with 4 default slots
 
@@ -44,30 +44,24 @@ export default function ParticipantsScreen() {
 
         const tournamentId = uuidv4();
         const type = params.type as 'LEAGUE' | 'KNOCKOUT' | 'GROUPS_KNOCKOUT'; // Updated type
+        const hasTwoLegs = params.hasTwoLegs === 'true';
+
+        // Update generator signatures in fixtureGenerator.ts later
+        // For Knockout: generateKnockoutFixtures(participants, tournamentId, hasTwoLegs)
+        // For League: generateLeagueFixtures(participants, tournamentId, hasTwoLegs ? 2 : 1)
 
         let fixtures;
+        let finalParticipants = participants;
+
         if (type === 'LEAGUE') {
-            fixtures = generateLeagueFixtures(participants, tournamentId);
+            fixtures = generateLeagueFixtures(participants, tournamentId, hasTwoLegs ? 2 : 1);
         } else if (type === 'KNOCKOUT') {
-            fixtures = generateKnockoutFixtures(participants, tournamentId);
+            // Need to update utility to accept hasTwoLegs
+            fixtures = generateKnockoutFixtures(participants, tournamentId, hasTwoLegs);
         } else if (type === 'GROUPS_KNOCKOUT') {
             const result = generateGroupKnockoutFixtures(participants, tournamentId);
             fixtures = result.fixtures;
-            // Group assignment updates participants
-            // We need to update the local participants array before saving? 
-            // Yes, result.participantsWithGroups contains definitions.
-            // But `participants` const here is just created. We should use the returned one.
-            // Wait, participants is const.
-            // We need to assign filtered/updated participants to the Tournament object.
-            // Let's refactor slightly.
-        }
-
-        // Refactor to use possibly updated participants
-        let finalParticipants = participants;
-        if (type === 'GROUPS_KNOCKOUT') {
-            const res = generateGroupKnockoutFixtures(participants, tournamentId);
-            fixtures = res.fixtures;
-            finalParticipants = res.participantsWithGroups;
+            finalParticipants = result.participantsWithGroups;
         }
 
         const tournament: Tournament = {
@@ -77,7 +71,8 @@ export default function ParticipantsScreen() {
             participants: finalParticipants,
             fixtures: fixtures!,
             status: 'ACTIVE',
-            stage: type === 'GROUPS_KNOCKOUT' ? 'GROUP_STAGE' : undefined, // Added stage
+            stage: type === 'GROUPS_KNOCKOUT' ? 'GROUP_STAGE' : undefined,
+            hasTwoLegs,
             createdAt: Date.now(),
         };
 

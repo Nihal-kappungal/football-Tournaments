@@ -78,85 +78,118 @@ export const handleKnockoutProgression = (tournament: Tournament, completedMatch
     const roundOrder = completedMatch.roundOrder || 1;
     const roundMatches = tournament.fixtures.filter(m => m.roundOrder === roundOrder);
 
-    // We need to pair this match with its neighbor to form the next game.
-    // Assuming fixtures are ordered: 0 vs 1, 2 vs 3.
-    // We need to find the index of completedMatch in the ROUND list (sorted/stable).
-    const matchIndex = roundMatches.findIndex(m => m.id === completedMatch.id);
-    if (matchIndex === -1) return;
+    // Group matches into Ties (Pairs of participants)
+    // We assume the roundMatches array preserves the bracket order: [Pair1, Pair2, Pair3, Pair4]
+    // A Pair might consist of 1 match (Single Leg) or 2 matches (Two Legs)
+    // We can identify unique pairs by sorting their IDs.
+    const ties: { id: string, matches: Match[], p1: string, p2: string }[] = [];
+    const processedMatchIds = new Set<string>();
 
-    // Find neighbor
-    const isEven = matchIndex % 2 === 0;
-    const neighborIndex = isEven ? matchIndex + 1 : matchIndex - 1;
+    roundMatches.forEach(m => {
+        if (processedMatchIds.has(m.id)) return;
 
-    if (neighborIndex < 0 || neighborIndex >= roundMatches.length) {
-        // No neighbor? Maybe final or bye.
-        // If it's the last match (Final), we are done.
+        // Find part of same tie (same participants)
+        const sameTieMatches = roundMatches.filter(rm =>
+            !processedMatchIds.has(rm.id) &&
+            ((rm.homeTeamId === m.homeTeamId && rm.awayTeamId === m.awayTeamId) ||
+                (rm.homeTeamId === m.awayTeamId && rm.awayTeamId === m.homeTeamId))
+        );
+
+        sameTieMatches.forEach(stm => processedMatchIds.add(stm.id));
+
+        ties.push({
+            id: [m.homeTeamId, m.awayTeamId].sort().join('-'),
+            matches: sameTieMatches,
+            p1: m.homeTeamId,
+            p2: m.awayTeamId
+        });
+    });
+
+    // Find the current tie
+    const currentTieIndex = ties.findIndex(t => t.matches.some(m => m.id === completedMatch.id));
+    if (currentTieIndex === -1) return;
+    const currentTie = ties[currentTieIndex];
+
+    // Check if Current Tie is complete (all legs played)
+    if (!currentTie.matches.every(m => m.isPlayed)) return;
+
+    // Find Neighbor Tie (0 vs 1, 2 vs 3, etc.)
+    const isEven = currentTieIndex % 2 === 0;
+    const neighborTieIndex = isEven ? currentTieIndex + 1 : currentTieIndex - 1;
+
+    if (neighborTieIndex < 0 || neighborTieIndex >= ties.length) {
+        // Final or Bye scenario (no neighbor to play against)
         return;
     }
 
-    const neighborMatch = roundMatches[neighborIndex];
+    const neighborTie = ties[neighborTieIndex];
+    if (!neighborTie.matches.every(m => m.isPlayed)) {
+        // Neighbor not ready yet
+        return;
+    }
 
-    if (neighborMatch.isPlayed) {
-        // Both played. Create next round match.
-        // Determine winners
-        const getWinnerId = (m: Match) => {
-            if (m.homeScore! > m.awayScore!) return m.homeTeamId;
-            if (m.awayScore! > m.homeScore!) return m.awayTeamId;
-            // Penalties? For MVP, assume higher seed or random if draw? 
-            // Or preventing draw in UI.
-            return m.homeTeamId; // Fallback
-        };
+    // Both ties complete. Determine winners.
+    const getTieWinner = (tie: typeof currentTie): string => {
+        let p1Score = 0;
+        let p2Score = 0;
+        // Identify participants from the tie structure (p1, p2 are just from the first match found)
+        // We need to be careful about which ID is which score
+        const { p1, p2 } = tie;
 
-        const winnerA = getWinnerId(completedMatch);
-        const winnerB = getWinnerId(neighborMatch);
+        tie.matches.forEach(m => {
+            if (m.homeTeamId === p1) {
+                p1Score += m.homeScore || 0;
+                p2Score += m.awayScore || 0;
+            } else {
+                p2Score += m.homeScore || 0;
+                p1Score += m.awayScore || 0;
+            }
+        });
 
-        // Check if next match already exists (idempotency)
-        // We can track by identifying "Winner of Round X Match Y".
-        // But simpler: just see if we have a match in next round with these sources?
-        // Or just append new match.
+        if (p1Score > p2Score) return p1;
+        if (p2Score > p1Score) return p2;
 
-        // Better: Pre-calculation. 
-        // But for dynamic:
-        const nextRound = roundOrder + 1;
+        // Tie-breaker: For now, default to p1 (Random/Seed) or implement away goals?
+        // User said "tiebreaker such as extra time...". We assume the score includes that if needed.
+        // Simplest fallback:
+        return p1;
+    };
 
-        // Need to check if we already generated a match for this pair?
-        // This function might be called twice (once for each match finish).
-        // We should check if *any* match in next round has one of these winners?
-        // No, IDs change.
+    const winnerA = getTieWinner(currentTie);
+    const winnerB = getTieWinner(neighborTie);
 
-        // Let's search if a match exists in next round that *links* to these previous matches.
-        // We don't have links.
+    // Create Next Round Matches
+    const nextRound = roundOrder + 1;
 
-        // Alternative: Use deterministic IDs for matches? 
-        // Or rely on array position.
-        // Let's just create it and assume we won't duplicate because we check if `neighborMatch.isPlayed` just became true? 
-        // No, both are true now.
+    // Check if next round match exists for these two winners
+    const existing = tournament.fixtures.find(m =>
+        m.roundOrder === nextRound &&
+        ((m.homeTeamId === winnerA && m.awayTeamId === winnerB) ||
+            (m.homeTeamId === winnerB && m.awayTeamId === winnerA))
+    );
 
-        // We need to verify if the next match exists.
-        // Simplest way given data structure: 
-        // We can't easily know. 
-        // Let's assume we strictly generate it now.
-        // To avoid duplicates, we could check if a match in Next Round has these Participants.
-
-        const existing = tournament.fixtures.find(m =>
-            m.roundOrder === nextRound &&
-            ((m.homeTeamId === winnerA && m.awayTeamId === winnerB) ||
-                (m.homeTeamId === winnerB && m.awayTeamId === winnerA))
-        );
-
-        if (!existing) {
+    if (!existing) {
+        // Create 1 or 2 matches based on tournament setting
+        const createMatch = (h: string, a: string, name: string) => {
             tournament.fixtures.push({
                 id: uuidv4(),
                 tournamentId: tournament.id,
-                homeTeamId: winnerA, // Logic: winner of headers is home?
-                awayTeamId: winnerB,
+                homeTeamId: h,
+                awayTeamId: a,
                 homeScore: null,
                 awayScore: null,
                 isPlayed: false,
                 roundOrder: nextRound,
-                roundName: `Round ${nextRound}`, // Or "Semi-Final" etc logic
+                roundName: name,
                 scorers: []
             });
+        };
+
+        if (tournament.hasTwoLegs) {
+            createMatch(winnerA, winnerB, `Round ${nextRound} - Leg 1`);
+            createMatch(winnerB, winnerA, `Round ${nextRound} - Leg 2`);
+        } else {
+            createMatch(winnerA, winnerB, `Round ${nextRound}`);
         }
     }
 }
@@ -173,18 +206,13 @@ export const checkTournamentCompletion = (tournament: Tournament) => {
             tournament.status = 'COMPLETED';
         }
     } else if (tournament.type === 'KNOCKOUT' || (tournament.type === 'GROUPS_KNOCKOUT' && tournament.stage === 'KNOCKOUT_STAGE')) {
-        // Completion is when the FINAL is played.
-        // How to detect final? It's the match with no next round possible.
-        // Or simply: It's the single match in the last round.
-        // Find max round order.
         if (tournament.fixtures.length === 0) return;
 
         const maxRound = Math.max(...tournament.fixtures.map(m => m.roundOrder || 0));
         const finalMatches = tournament.fixtures.filter(m => m.roundOrder === maxRound);
 
-        // If it is the final round, there should be 1 match (Final) or maybe 2 (3rd place?).
-        // Usually 1 match.
-        if (finalMatches.length === 1 && finalMatches[0].isPlayed) {
+        // All matches in final round must be played
+        if (finalMatches.length > 0 && finalMatches.every(m => m.isPlayed)) {
             tournament.status = 'COMPLETED';
         }
     }

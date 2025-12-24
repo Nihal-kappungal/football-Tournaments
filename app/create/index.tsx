@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, Switch } from 'react-native';
 import React, { useState } from 'react';
 import { Colors, Layout } from '../../constants/Colors';
 import { useRouter } from 'expo-router';
@@ -8,7 +8,15 @@ import { TournamentType } from '../../types/types';
 export default function CreateTournamentScreen() {
     const [name, setName] = useState('');
     const [type, setType] = useState<TournamentType>('LEAGUE');
+    const [hasTwoLegs, setHasTwoLegs] = useState(false);
     const router = useRouter();
+
+    const handleTypeChange = (newType: TournamentType) => {
+        setType(newType);
+        if (newType !== 'KNOCKOUT') {
+            setHasTwoLegs(false);
+        }
+    };
 
     const handleNext = () => {
         if (!name.trim()) {
@@ -17,7 +25,7 @@ export default function CreateTournamentScreen() {
         }
         router.push({
             pathname: '/create/participants',
-            params: { name, type }
+            params: { name, type, hasTwoLegs: hasTwoLegs ? 'true' : 'false' }
         });
     };
 
@@ -43,7 +51,7 @@ export default function CreateTournamentScreen() {
                     <View style={styles.typeContainer}>
                         <TouchableOpacity
                             style={[styles.typeOption, type === 'LEAGUE' && styles.typeSelected]}
-                            onPress={() => setType('LEAGUE')}
+                            onPress={() => handleTypeChange('LEAGUE')}
                         >
                             <Ionicons name="list" size={32} color={type === 'LEAGUE' ? Colors.dark.background : Colors.dark.gray} />
                             <Text style={[styles.typeText, type === 'LEAGUE' && styles.typeTextSelected]}>League</Text>
@@ -52,7 +60,7 @@ export default function CreateTournamentScreen() {
 
                         <TouchableOpacity
                             style={[styles.typeOption, type === 'KNOCKOUT' && styles.typeSelected]}
-                            onPress={() => setType('KNOCKOUT')}
+                            onPress={() => handleTypeChange('KNOCKOUT')}
                         >
                             <Ionicons name="git-network" size={32} color={type === 'KNOCKOUT' ? Colors.dark.background : Colors.dark.gray} />
                             <Text style={[styles.typeText, type === 'KNOCKOUT' && styles.typeTextSelected]}>Knockout</Text>
@@ -61,7 +69,7 @@ export default function CreateTournamentScreen() {
 
                         <TouchableOpacity
                             style={[styles.typeOption, type === 'GROUPS_KNOCKOUT' && styles.typeSelected]}
-                            onPress={() => setType('GROUPS_KNOCKOUT')}
+                            onPress={() => handleTypeChange('GROUPS_KNOCKOUT')}
                         >
                             <Ionicons name="people" size={32} color={type === 'GROUPS_KNOCKOUT' ? Colors.dark.background : Colors.dark.gray} />
                             <Text style={[styles.typeText, type === 'GROUPS_KNOCKOUT' && styles.typeTextSelected]}>Hybrid</Text>
@@ -69,6 +77,23 @@ export default function CreateTournamentScreen() {
                         </TouchableOpacity>
                     </View>
                 </View>
+
+
+                {/* Home & Away Toggle (Only for Knockout) */}
+                {type === 'KNOCKOUT' && (
+                    <View style={styles.optionRow}>
+                        <View style={{ flex: 1 }}>
+                            <Text style={styles.optionLabel}>Home & Away (2 Legs)</Text>
+                            <Text style={styles.optionDesc}>Play each opponent twice (Home and Away).</Text>
+                        </View>
+                        <Switch
+                            value={hasTwoLegs}
+                            onValueChange={setHasTwoLegs}
+                            trackColor={{ false: Colors.dark.surface, true: Colors.dark.accent }}
+                            thumbColor={Colors.dark.text}
+                        />
+                    </View>
+                )}
 
             </ScrollView>
 
@@ -78,7 +103,7 @@ export default function CreateTournamentScreen() {
                     <Ionicons name="arrow-forward" size={20} color={Colors.dark.background} />
                 </TouchableOpacity>
             </View>
-        </KeyboardAvoidingView>
+        </KeyboardAvoidingView >
     );
 }
 
@@ -160,5 +185,25 @@ const styles = StyleSheet.create({
         color: Colors.dark.background,
         fontWeight: 'bold',
         fontSize: 18,
+    },
+    optionRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: Colors.dark.surface,
+        padding: Layout.spacing.md,
+        borderRadius: Layout.borderRadius.md,
+        marginTop: Layout.spacing.md,
+        borderWidth: 1,
+        borderColor: Colors.dark.border,
+    },
+    optionLabel: {
+        color: Colors.dark.text,
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+    optionDesc: {
+        color: Colors.dark.gray,
+        fontSize: 12,
+        marginTop: 4,
     },
 });
